@@ -1,12 +1,15 @@
 package com.game.huyhoang.weirdchess;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -22,54 +25,96 @@ import com.game.huyhoang.weirdchess.Chessmen.Rook;
 
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.Set;
 
 public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
 
+
+
     public static final int ROW_NUM = 12;
     public static final int COLUMN_NUM = 8;
+    public static final int MAX_SPEED = 10;
+    public static final int MIN_ROW_NUM_FOR_CREATING_A_CHESSMAN = 4;
+    public static final int CHESSMAN_TYPE_NUM = 6;
 
-    public static final int TILE_WIDTH = 128;
-    public static final int TILE_HEIGHT = 128;
+    public static int TILE_WIDTH = 128;
+    public static int TILE_HEIGHT = 128;
 
-    public static int gameSpeed = 2;
+    public static int gameSpeed = 3;
 
     private MainThread thread;
+
     private Background middleBackground;
     private Background topBackground;
     private Background bottomBackground;
+
     private Context context;
     private Player player;
     private Tile tileDestination;
+
     private ArrayList<Row> rows;
     private ArrayList<Chessman> chessmen;
+
     private int chessboardX;
     private int chessboardY;
+
+    private int screenWidth;
+    private int screenHeight;
+
     private int count;
-    private int minRowForProducingAChessman;
+    private int rowNumForCreatingAChessman;
+
     private boolean isStarted;
     private boolean isLost;
-    private Paint paint;
+
+    private Paint scorePaint;
+    private Paint helpPaint;
+
+
 
     Random random = new Random();
 
-    public GamePanel(Context context) {
-        super(context);
+    public GamePanel(Activity activity) {
+        super(activity);
+
+        Display display = activity.getWindowManager().getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        screenWidth = size.x;
+        screenHeight = size.y;
+        int tileWidth = screenWidth/COLUMN_NUM;
+        int tileHeight = screenHeight/(ROW_NUM + 1);
+        Log.d("GamePanel", "Screen width : " + screenWidth);
+        Log.d("GamePanel", "Screen height : " + screenHeight);
+
+        if(tileWidth > tileHeight) {
+            tileWidth = tileHeight;
+        }
+
+        if(tileWidth > 128) TILE_WIDTH = 128;
+        TILE_HEIGHT = TILE_WIDTH;
+
+
         isStarted = true;
         isLost = false;
-        gameSpeed = 4;
-
-        paint = new Paint();
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.YELLOW);
-        paint.setTextSize(50);
+        gameSpeed = 3;
 
 
-        this.context = context;
+
+        scorePaint = new Paint();
+        scorePaint.setStyle(Paint.Style.STROKE);
+        scorePaint.setColor(Color.YELLOW);
+        scorePaint.setTextSize(50);
+
+        helpPaint = new Paint();
+        helpPaint.setStyle(Paint.Style.FILL);
+        helpPaint.setColor(Color.BLUE);
+        helpPaint.setTextSize(50);
+
+
+        this.context = activity;
         count = 0;
-        minRowForProducingAChessman = 10;
-
+        rowNumForCreatingAChessman = 6;
 
         getHolder().addCallback(this);
         thread = new MainThread(getHolder(), this);
@@ -87,7 +132,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
         //        chessBoard = new ChessBoard(context, getWidth()/2 - ChessBoard.COLUMN_NUM * ChessBoard.TILE_WIDTH /2, 200);
         chessboardX = getWidth() / 2 - COLUMN_NUM * TILE_WIDTH / 2;
-        chessboardY = 200;
+        chessboardY = TILE_HEIGHT;
 
         rows = new ArrayList<>();
         chessmen = new ArrayList<>();
@@ -171,15 +216,15 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
         if (player.isPlaying() && !isLost) {
 
 
-            minRowForProducingAChessman = 8 - player.getScore()/50;
+            rowNumForCreatingAChessman = 8 - player.getScore()/50;
 
-            if (minRowForProducingAChessman < 4) {
-                minRowForProducingAChessman = 4;
+            if (rowNumForCreatingAChessman < MIN_ROW_NUM_FOR_CREATING_A_CHESSMAN) {
+                rowNumForCreatingAChessman = MIN_ROW_NUM_FOR_CREATING_A_CHESSMAN;
             }
             gameSpeed = player.getScore() / 50 + 3;
 
-            if (gameSpeed > 10) {
-                gameSpeed = 10;
+            if (gameSpeed > MAX_SPEED) {
+                gameSpeed = MAX_SPEED;
             }
             //update chessmen
 
@@ -215,9 +260,9 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
                 for (int i = 1; i < rows.size(); i++) {
                     rows.get(i).setRow(i);
                 }
-                if (count % minRowForProducingAChessman == 0) {
+                if (count % rowNumForCreatingAChessman == 0) {
                     int num = (int) (new Random().nextDouble() * COLUMN_NUM);
-                    int chessOption = (int) (new Random().nextDouble() * 6);
+                    int chessOption = (int) (new Random().nextDouble() * CHESSMAN_TYPE_NUM);
 
                     Chessman chessman;
                     switch (chessOption) {
@@ -292,9 +337,12 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback {
 
         player.draw(canvas);
 
-        canvas.drawText("Score : " + player.getScore(), 50, 40, paint);
+        canvas.drawText("Score : " + player.getScore(), 50, TILE_HEIGHT/2, scorePaint);
 
-
+        if(!player.isPlaying()){
+            canvas.drawText("Tab to start!!", TILE_WIDTH, screenHeight/2 - TILE_HEIGHT, helpPaint);
+            canvas.drawText("Move your Knight to attack other chessman!!", TILE_WIDTH, screenHeight/2 + TILE_HEIGHT, helpPaint);
+        }
     }
 
     public void goToHomeActivity() {
