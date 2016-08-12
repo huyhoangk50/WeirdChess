@@ -47,7 +47,7 @@ public class Player extends GameObject {
     }
 
     public void draw(Canvas canvas) {
-        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()), new Rect(x, y, x + 128, y + 128), null);
+        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()), new Rect(x, y, x + GamePanel.TILE_WIDTH, y + GamePanel.TILE_HEIGHT), null);
     }
 
     public boolean isPlaying() {
